@@ -11,8 +11,10 @@ class ShapeEvaluation {
 public:
     ShapeEvaluation();
 
-    static double ComputeCompactness(const ParticleSystem &particleSystem, const int nModes, const std::string &saveScreePlotTo="");
-    static double ComputeGeneralization(const ParticleSystem &particleSystem, const int nModes);
+    static double ComputeCompactness(const ParticleSystem &particleSystem, const int nModes,
+                                     const std::string &saveScreePlotTo="");
+    static double ComputeGeneralization(const ParticleSystem &particleSystem, const int nModes,
+                                        const std::string &saveReconstructionTo="");
     static double ComputeSpecificity(const ParticleSystem &particleSystem, const int nModes);
 };
 }

@@ -1,6 +1,7 @@
 #include "ShapeEvaluation.h"
 
 
+#include <utility>
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -29,7 +30,7 @@ namespace shapeworks {
         }
         cumsum /= S.sum();
 
-        if(saveScreePlotTo != "") {
+        if(!saveScreePlotTo.empty()) {
             std::ofstream of(saveScreePlotTo);
             of << cumsum;
             of.close();
@@ -38,11 +39,19 @@ namespace shapeworks {
         return cumsum(nModes - 1);
     }
 
-    double ShapeEvaluation::ComputeGeneralization(const ParticleSystem &particleSystem, const int nModes) {
+    // The optional arg saveReconstructionTo specifies a folder to save the reconstructions into.
+    double ShapeEvaluation::ComputeGeneralization(const ParticleSystem &particleSystem, const int nModes, const std::string &saveReconstructionTo) {
         const int N = particleSystem.N();
         const int D = particleSystem.D();
 
         const Eigen::MatrixXd &P = particleSystem.Particles();
+
+        struct Reconstruction {
+            double dist;
+            int shapeIdx;
+            Eigen::MatrixXd rec;
+        };
+        std::vector<Reconstruction> reconstructions;
 
         double totalDist = 0.0;
         for(int leave=0; leave<N; leave++) {
@@ -52,12 +61,13 @@ namespace shapeworks {
 
             const Eigen::VectorXd mu = Y.rowwise().mean();
             Y.colwise() -= mu;
-            const Eigen::VectorXd Ytest = P.col(leave) - mu;
+
+            const Eigen::VectorXd Ytest = P.col(leave);
 
             Eigen::JacobiSVD<Eigen::MatrixXd> svd(Y, Eigen::ComputeFullU);
             const auto epsi = svd.matrixU().block(0, 0, D, nModes);
-            const auto betas = epsi.transpose() * Ytest;
-            const Eigen::VectorXd rec = epsi * betas;
+            const auto betas = epsi.transpose() * (Ytest - mu);
+            const Eigen::VectorXd rec = (epsi * betas) + mu;
 
             //TODO: This assumes 3-Dimensions
             const Eigen::Map<const RowMajorMatrix> Ytest_reshaped(Ytest.data(), D/3, 3);
@@ -68,6 +78,24 @@ namespace shapeworks {
                     .array().sqrt().sum();
 
             totalDist += dist;
+
+            reconstructions.push_back({dist, leave, rec_reshaped});
+        }
+
+        if(!saveReconstructionTo.empty()) {
+            std::sort(reconstructions.begin(), reconstructions.end(),
+                      [](const Reconstruction &l, const Reconstruction &r) { return l.dist < r.dist; });
+            for(int i=0; i<reconstructions.size(); i++) {
+                std::stringstream ss;
+                ss << saveReconstructionTo << '/' << i << '_' << reconstructions[i].shapeIdx << ".particles";
+
+                std::ofstream of(ss.str());
+                if(!of) {
+                    throw std::runtime_error("Unable to open file: " + ss.str());
+                }
+                of << reconstructions[i].rec << std::endl;
+                of.close();
+            }
         }
 
         const double generalizability = totalDist / N;

@@ -53,6 +53,7 @@ void Generalization::buildParser() {
     parser.prog(prog).description(desc);
 
     parser.add_option("--nmodes").action("store").type("int").set_default("1").help("Number of modes to use");
+    parser.add_option("--saveto").action("store").type("string").set_default("").help("Optionally save the reconstructed particles to a specified folder");
 
     Command::buildParser();
 }
@@ -60,7 +61,8 @@ void Generalization::buildParser() {
 ///////////////////////////////////////////////////////////////////////////////
 int Generalization::execute(const optparse::Values &options, SharedCommandData &sharedData) {
     const int nModes = static_cast<int>(options.get("nmodes"));
-    const double r = ShapeEvaluation::ComputeGeneralization(sharedData.particleSystem, nModes);
+    const std::string saveTo = static_cast<std::string>(options.get("saveto"));
+    const double r = ShapeEvaluation::ComputeGeneralization(sharedData.particleSystem, nModes, saveTo);
     std::cout << r << std::endl;
 
     return true;
