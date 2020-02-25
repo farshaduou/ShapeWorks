@@ -16,7 +16,7 @@
 #define __itkParticleImageDomain_h
 
 #include "itkImage.h"
-#include "itkParticleRegionDomain.h"
+#include "itkParticleDomain.h"
 #include "itkLinearInterpolateImageFunction.h"
 
 namespace itk
@@ -32,38 +32,50 @@ namespace itk
  *
  */
 template <class T, unsigned int VDimension=3>
-class ITK_EXPORT ParticleImageDomain : public ParticleRegionDomain<VDimension>
+class ITK_EXPORT ParticleImageDomain : public ParticleDomain<VDimension>
 {
 public:
-  /** Standard class typedefs */
-  typedef ParticleImageDomain Self;
-  typedef ParticleRegionDomain<VDimension> Superclass;
-  typedef SmartPointer<Self>  Pointer;
-  typedef SmartPointer<const Self> ConstPointer;
-  typedef WeakPointer<const Self>  ConstWeakPointer;
 
   /** Type of the ITK image used by this class. */
   typedef Image<T, VDimension> ImageType;
 
-  /** Method for creation through the object factory. */
-  itkNewMacro(Self);
-
-  /** Run-time type information (and related methods). */
-  itkTypeMacro(ParticleImageDomain, ParticleRegionDomain);
-
   /** Point type of the domain (not the image). */
-  typedef typename Superclass::PointType PointType;
+  typedef Point<double, VDimension> PointType;
 
   typedef LinearInterpolateImageFunction<ImageType, typename PointType::CoordRepType>
   ScalarInterpolatorType;
 
-  /** Dimensionality of the domain of the particle system. */
-  itkStaticConstMacro(Dimension, unsigned int, VDimension);
+  /** Moves the point inside of the boundaries of the image */
+  virtual bool ApplyConstraints(PointType& p) const {
+      bool changed = false;
+      for (unsigned int i = 0; i < VDimension; i++)
+      {
+          if (p[i] < GetLowerBound()[i]) {
+              changed = true;
+              p[i] = GetLowerBound()[i];
+          }
+          else if (p[i] > GetUpperBound()[i]) {
+              changed = true;
+              p[i] = GetUpperBound()[i];
+          }
+      }
+      return changed;
+  }
+  /** Set the lower/upper bound of the bounded region. */
+  itkSetMacro(LowerBound, PointType);
+  itkSetMacro(UpperBound, PointType);
+  virtual const PointType& GetUpperBound() const { return m_UpperBound; }
+  virtual const PointType& GetLowerBound() const { return m_LowerBound; }
+  /** Specify the lower and upper bounds of the region. */
+  void SetRegion(const PointType& lowerBound, const PointType& upperBound)
+  {
+      SetLowerBound(lowerBound);
+      SetUpperBound(upperBound);
+  }
 
   /** Set/Get the itk::Image specifying the particle domain.  The set method
       modifies the parent class LowerBound and UpperBound. */
-  void SetImage(ImageType *I)
-  {
+  void SetImage(ImageType *I) {
     this->Modified();
     m_Image= I;
 
@@ -88,8 +100,8 @@ public:
     // Cast points to higher precision if needed.  Parent class uses doubles
     // because they are compared directly with points in the particle system,
     // which are always double precision.
-    typename Superclass::PointType l;
-    typename Superclass::PointType u;
+    typename PointType l;
+    typename PointType u;
     
     for (unsigned int i = 0; i < VDimension; i++)
       {
@@ -105,8 +117,7 @@ public:
 
   /** Sample the image at a point.  This method performs no bounds checking.
       To check bounds, use IsInsideBuffer. */
-  inline T Sample(const PointType &p) const
-  {
+  inline T Sample(const PointType &p) const {
       if(IsInsideBuffer(p))
         return  m_ScalarInterpolator->Evaluate(p);
       else
@@ -114,12 +125,12 @@ public:
   }
 
   /** Check whether the point p may be sampled in this image domain. */
-  inline bool IsInsideBuffer(const PointType &p) const
-  { return m_ScalarInterpolator->IsInsideBuffer(p); }
+  inline bool IsInsideBuffer(const PointType &p) const { 
+      return m_ScalarInterpolator->IsInsideBuffer(p); 
+  }
 
   /** Used when a domain is fixed. */
-  void DeleteImages()
-  {
+  void DeleteImages() {
     m_Image = 0;
     m_ScalarInterpolator = 0;
   }
@@ -128,37 +139,31 @@ public:
   itkGetObjectMacro(ScalarInterpolator, ScalarInterpolatorType);
   
 protected:
-  ParticleImageDomain()
-  {
+  ParticleImageDomain() {
     m_ScalarInterpolator = ScalarInterpolatorType::New();
   }
 
-  void PrintSelf(std::ostream& os, Indent indent) const
-  {
+  void PrintSelf(std::ostream& os, Indent indent) const {
     Superclass::PrintSelf(os, indent);
-    
+
+    os << "LowerBound = " << GetLowerBound() << std::endl;
+    os << "UpperBound = " << GetUpperBound() << std::endl;
     os << indent << "m_Image = " << m_Image << std::endl;
     os << indent << "m_ScalarInterpolator = " << m_ScalarInterpolator << std::endl;
   }
   virtual ~ParticleImageDomain() {};
   
 private:
-  ParticleImageDomain(const Self&); //purposely not implemented
-  void operator=(const Self&); //purposely not implemented
+  ParticleImageDomain(const ParticleImageDomain&); //purposely not implemented
+  void operator=(const ParticleImageDomain&); //purposely not implemented
 
   typename ImageType::Pointer m_Image;
   typename ScalarInterpolatorType::Pointer m_ScalarInterpolator;
+
+  PointType m_LowerBound;
+  PointType m_UpperBound;
 };
 
 } // end namespace itk
-
-
-#if ITK_TEMPLATE_EXPLICIT
-//# include "Templates/itkParticleImageDomain+-.h"
-#endif
-
-#if ITK_TEMPLATE_TXX
-//# include "itkParticleImageDomain.txx"
-#endif
 
 #endif
