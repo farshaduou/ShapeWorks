@@ -23,7 +23,7 @@
 #include <vector>
 #include "vnl/vnl_vector_fixed.h"
 #include "itkParticleVectorFunction.h"
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 #include <algorithm>
 
 namespace itk
@@ -55,7 +55,7 @@ public:
   itkNewMacro(Self);
 
   /** Type of the domain. */
-  typedef ParticleImageDomainWithGradients<TGradientNumericType, VDimension> DomainType;
+  typedef ParticleImageDomain<TGradientNumericType, VDimension> DomainType;
   
   /** Run-time type information (and related methods). */
   itkTypeMacro(ParticleGradientDescentPositionOptimizer, Object);

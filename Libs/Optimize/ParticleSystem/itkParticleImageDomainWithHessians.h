@@ -16,7 +16,7 @@
 #define __itkParticleImageDomainWithHessians_h
 
 #include "itkImage.h"
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 #include "itkLinearInterpolateImageFunction.h"
 #include "itkGradientImageFilter.h"
 #include "itkFixedArray.h"
@@ -40,12 +40,12 @@ namespace itk
  */
 template <class T, unsigned int VDimension=3>
 class ITK_EXPORT ParticleImageDomainWithHessians
-  : public ParticleImageDomainWithGradients<T, VDimension>
+  : public ParticleImageDomain<T, VDimension>
 {
 public:
   /** Standard class typedefs */
   typedef ParticleImageDomainWithHessians Self;
-  typedef ParticleImageDomainWithGradients<T, VDimension> Superclass;
+  typedef ParticleImageDomain<T, VDimension> Superclass;
   typedef SmartPointer<Self>  Pointer;
   typedef SmartPointer<const Self> ConstPointer;
   typedef WeakPointer<const Self>  ConstWeakPointer;

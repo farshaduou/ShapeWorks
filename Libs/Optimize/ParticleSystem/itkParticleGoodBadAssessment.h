@@ -2,7 +2,7 @@
 #define ITKPARTICLEGOODBADASSESSMENT_H
 
 #include "itkParticleSystem.h"
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 #include "itkParticleImageDomainWithCurvature.h"
 #include <algorithm>
 namespace itk
@@ -29,7 +29,7 @@ public:
     typedef typename ParticleSystemType::PointType PointType;
 
     /** Type of the domain. */
-    typedef ParticleImageDomainWithGradients<TGradientNumericType, VDimension> DomainType;
+    typedef ParticleImageDomain<TGradientNumericType, VDimension> DomainType;
     typedef typename DomainType::VnlVectorType NormalType;
 
     typedef ParticleMeanCurvatureAttribute<TGradientNumericType, VDimension> MeanCurvatureCacheType;

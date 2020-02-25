@@ -8,7 +8,7 @@
 #include "vnl/vnl_matrix.h"
 
 #include "itkParticleImplicitSurfaceDomain.h"
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 #include "itkParticleImageDomainWithHessians.h"
 #include "TriMesh.h"
 
@@ -125,9 +125,6 @@ public:
         const ParticleImplicitSurfaceDomain<float, 3>* domain
                 = static_cast<const ParticleImplicitSurfaceDomain<float ,3> *>(ps->GetDomain(d));
 
-        const ParticleImageDomainWithGradients<float, 3> * domainWithGrad
-                = static_cast<const ParticleImageDomainWithGradients<float ,3> *>(ps->GetDomain(d));
-
         const ParticleImageDomainWithHessians<float, 3> * domainWithHess
                 = static_cast<const ParticleImageDomainWithHessians<float ,3> *>(ps->GetDomain(d));
 
@@ -165,8 +162,8 @@ public:
             }
             else
             {
-                typename ParticleImageDomainWithGradients<float,3>::VnlVectorType pG = domainWithGrad->SampleGradientVnl(posLocal);
-                typename ParticleImageDomainWithGradients<float,3>::VnlVectorType pN = pG.normalize();
+                typename ParticleImageDomain<float,3>::VnlVectorType pG = domain->SampleGradientVnl(posLocal);
+                typename ParticleImageDomain<float,3>::VnlVectorType pN = pG.normalize();
                 float grad_mag = pG.magnitude();
 
                 typename ParticleImageDomainWithHessians<float,3>::VnlMatrixType pH = domainWithHess->SampleHessianVnl(posLocal);

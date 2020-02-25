@@ -19,6 +19,10 @@
 #include "itkParticleDomain.h"
 #include "itkLinearInterpolateImageFunction.h"
 
+#include "itkVectorLinearInterpolateImageFunction.h"
+#include "itkGradientImageFilter.h"
+#include "itkFixedArray.h"
+
 namespace itk
 {
 /** \class ParticleImageDomain
@@ -38,6 +42,12 @@ public:
 
   /** Type of the ITK image used by this class. */
   typedef Image<T, VDimension> ImageType;
+  typedef GradientImageFilter<ImageType> GradientImageFilterType;
+  typedef typename GradientImageFilterType::OutputImageType GradientImageType;
+  typedef VectorLinearInterpolateImageFunction<GradientImageType, typename PointType::CoordRepType> GradientInterpolatorType;
+
+  typedef FixedArray<T, 3> VectorType;
+  typedef vnl_vector_fixed<T, 3> VnlVectorType;
 
   /** Point type of the domain (not the image). */
   typedef Point<double, VDimension> PointType;
@@ -61,6 +71,25 @@ public:
       }
       return changed;
   }
+  /** This method is called by an optimizer after a call to Evaluate and may be
+    used to apply any constraints the resulting vector, such as a projection
+    to the surface tangent plane. Returns true if the gradient was modified.*/
+  virtual bool ApplyVectorConstraints(
+                                      vnl_vector_fixed<double, 
+                                      VDimension>& gradE,
+                                      const PointType& pos,
+                                      double maxtimestep) const {
+      if (this->m_ConstraintsEnabled == true) {
+          const double epsilon = 1.0e-10;
+          double dotprod = 0.0;
+          VnlVectorType normal = this->SampleNormalVnl(pos, epsilon);
+          for (unsigned int i = 0; i < VDimension; i++) { dotprod += normal[i] * gradE[i]; }
+          for (unsigned int i = 0; i < VDimension; i++) { gradE[i] -= normal[i] * dotprod; }
+          return true;
+      }
+      return false;
+  }
+
   /** Set the lower/upper bound of the bounded region. */
   itkSetMacro(LowerBound, PointType);
   itkSetMacro(UpperBound, PointType);
@@ -111,7 +140,41 @@ public:
     
     this->SetLowerBound(l);
     this->SetUpperBound(u);
+
+
+    // Compute gradient image and set up gradient interpolation.
+    typename GradientImageFilterType::Pointer filter = GradientImageFilterType::New();
+    filter->SetInput(I);
+    filter->SetUseImageSpacingOn();
+    filter->Update();
+    m_GradientImage = filter->GetOutput();
+
+    m_GradientInterpolator->SetInputImage(m_GradientImage);
   }
+  /** Sample the image at a point.  This method performs no bounds checking.
+    To check bounds, use IsInsideBuffer.  SampleGradientsVnl returns a vnl
+    vector of length VDimension instead of an itk::CovariantVector
+    (itk::FixedArray). */
+  inline VectorType SampleGradient(const PointType& p) const
+  {
+      if (this->IsInsideBuffer(p))
+          return  m_GradientInterpolator->Evaluate(p);
+      else {
+          itkExceptionMacro("Gradient queried for a Point, " << p << ", outside the given image domain.");
+          VectorType g(1.0e-5);
+          return g;
+      }
+  }
+  inline VnlVectorType SampleGradientVnl(const PointType& p) const {
+      return VnlVectorType(this->SampleGradient(p).GetDataPointer());
+  }
+  inline VnlVectorType SampleNormalVnl(const PointType& p, T epsilon = 1.0e-5) const
+  {
+      VnlVectorType grad = this->SampleGradientVnl(p).normalize();
+      return grad;
+  }
+
+  itkGetObjectMacro(GradientImage, GradientImageType);
   itkGetObjectMacro(Image, ImageType);
   itkGetConstObjectMacro(Image, ImageType);
 
@@ -133,6 +196,8 @@ public:
   void DeleteImages() {
     m_Image = 0;
     m_ScalarInterpolator = 0;
+    m_GradientImage = 0;
+    m_GradientInterpolator = 0;
   }
 
   /** Allow public access to the scalar interpolator. */
@@ -141,15 +206,18 @@ public:
 protected:
   ParticleImageDomain() {
     m_ScalarInterpolator = ScalarInterpolatorType::New();
+    m_GradientInterpolator = GradientInterpolatorType::New();
   }
 
   void PrintSelf(std::ostream& os, Indent indent) const {
     Superclass::PrintSelf(os, indent);
 
-    os << "LowerBound = " << GetLowerBound() << std::endl;
-    os << "UpperBound = " << GetUpperBound() << std::endl;
+    os << indent << "LowerBound = " << GetLowerBound() << std::endl;
+    os << indent << "UpperBound = " << GetUpperBound() << std::endl;
     os << indent << "m_Image = " << m_Image << std::endl;
     os << indent << "m_ScalarInterpolator = " << m_ScalarInterpolator << std::endl;
+    os << indent << "m_GradientImage = " << m_GradientImage << std::endl;
+    os << indent << "m_GradientInterpolator = " << m_GradientInterpolator << std::endl;
   }
   virtual ~ParticleImageDomain() {};
   
@@ -162,6 +230,9 @@ private:
 
   PointType m_LowerBound;
   PointType m_UpperBound;
+
+  typename GradientImageType::Pointer m_GradientImage;
+  typename GradientInterpolatorType::Pointer m_GradientInterpolator;
 };
 
 } // end namespace itk

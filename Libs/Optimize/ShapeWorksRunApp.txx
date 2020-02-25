@@ -48,7 +48,7 @@
 #include "TriMesh.h"
 #include "itkImageToVTKImageFilter.h"
 #include "itkParticleImageDomain.h"
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 #include "itkParticleImplicitSurfaceDomain.h"
 #include "itkParticleImageDomainWithHessians.h"
 #include "object_reader.h"
@@ -2257,10 +2257,6 @@ ShapeWorksRunApp < SAMPLERTYPE > ::WritePointFilesWithFeatures(std::string iter_
       = static_cast < const itk::ParticleImplicitSurfaceDomain < float,
     3 > * > (m_Sampler->GetParticleSystem()->GetDomain(i));
 
-    const itk::ParticleImageDomainWithGradients < float, 3 > * domainWithGrad
-      = static_cast < const itk::ParticleImageDomainWithGradients < float,
-    3 > * > (m_Sampler->GetParticleSystem()->GetDomain(i));
-
     TriMesh* ptr;
     std::vector < float > fVals;
     if (m_mesh_based_attributes && m_attributes_per_domain.size() > 0) {
@@ -2284,8 +2280,7 @@ ShapeWorksRunApp < SAMPLERTYPE > ::WritePointFilesWithFeatures(std::string iter_
 //                }
 //                else
 //                {
-        typename itk::ParticleImageDomainWithGradients < float,
-        3 > ::VnlVectorType pG = domainWithGrad->SampleNormalVnl(pos);
+        typename itk::ParticleImageDomain < float, 3 > ::VnlVectorType pG = domain->SampleNormalVnl(pos);
         VectorType pN;
         pN[0] = pG[0]; pN[1] = pG[1]; pN[2] = pG[2];
         pN = m_Sampler->GetParticleSystem()->TransformVector(pN,

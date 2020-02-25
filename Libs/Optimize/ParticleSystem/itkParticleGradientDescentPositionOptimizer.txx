@@ -26,7 +26,6 @@ const int global_iteration = 1;
 #include <ctime>
 #include <time.h>
 #include <string>
-#include "itkParticleImageDomainWithGradients.h"
 #include <vector>
 #include <fstream>
 #include <sstream>

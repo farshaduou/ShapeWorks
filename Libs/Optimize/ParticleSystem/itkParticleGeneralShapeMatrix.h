@@ -8,7 +8,7 @@
 #include "vnl/vnl_matrix.h"
 
 #include "itkParticleImplicitSurfaceDomain.h"
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 #include "TriMesh.h"
 
 #include "itkParticleSystem.h"
@@ -133,9 +133,6 @@ public:
         const ParticleImplicitSurfaceDomain<float, 3>* domain
                 = static_cast<const ParticleImplicitSurfaceDomain<float ,3>*>(ps->GetDomain(d));
 
-        const ParticleImageDomainWithGradients<float, 3> * domainWithGrad
-             = static_cast<const ParticleImageDomainWithGradients<float ,3> *>(ps->GetDomain(d));
-
         TriMesh *ptr = domain->GetMesh();
         int s = 0;
         if (m_use_xyz[dom])
@@ -147,7 +144,7 @@ public:
         }
         if (m_use_normals[dom])
         {
-            ParticleImageDomainWithGradients<float, 3>::VnlVectorType pN = domainWithGrad->SampleNormalVnl(posLocal);
+            ParticleImageDomain<float, 3>::VnlVectorType pN = domain->SampleNormalVnl(posLocal);
             typename ParticleSystemType::VectorType tmp;
             tmp[0] = pN[0]; tmp[1] = pN[1]; tmp[2] = pN[2];
             tmp = ps->TransformVector(tmp, ps->GetTransform(d) * ps->GetPrefixTransform(d));

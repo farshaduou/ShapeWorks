@@ -17,7 +17,7 @@
 
 #include "itkParticleVectorFunction.h"
 #include "itkParticleContainerArrayAttribute.h"
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 #include <vector>
 
 namespace itk
@@ -134,7 +134,7 @@ public:
       results in a weight of 0. */
   void ComputeAngularWeights(const PointType &,
                              const typename ParticleSystemType::PointVectorType &,
-                             const ParticleImageDomainWithGradients<TGradientNumericType, VDimension> *,
+                             const ParticleImageDomain<TGradientNumericType, VDimension> *,
                              std::vector<double> &) const;
 
 

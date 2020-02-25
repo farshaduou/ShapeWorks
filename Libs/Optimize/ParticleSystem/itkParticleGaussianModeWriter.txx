@@ -15,7 +15,6 @@
 #ifndef __itkParticleGaussianModeWriter_txx
 #define __itkParticleGaussianModeWriter_txx
 
-#include "itkParticleImageDomainWithGradients.h"
 #include "vnl/algo/vnl_symmetric_eigensystem.h"
 #include "itkParticlePositionWriter.h"
 #include <string>

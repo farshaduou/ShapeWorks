@@ -15,7 +15,7 @@
 #ifndef __itkParticleQualifierEntropyGradientFunction_txx
 #define __itkParticleQualifierEntropyGradientFunction_txx
 
-#include "itkParticleImageDomainWithGradients.h"
+#include "itkParticleImageDomain.h"
 namespace itk {
 
 template <class TGradientNumericType, unsigned int VDimension>
@@ -39,7 +39,7 @@ void
 ParticleQualifierEntropyGradientFunction<TGradientNumericType, VDimension>
 ::ComputeAngularWeights(const PointType &pos,
                         const typename ParticleSystemType::PointVectorType &neighborhood,
-                        const ParticleImageDomainWithGradients<TGradientNumericType, VDimension> *domain,
+                        const ParticleImageDomain<TGradientNumericType, VDimension> *domain,
                         std::vector<double> &weights) const
 {
   GradientVectorType posnormal = domain->SampleNormalVnl(pos, 1.0e-10);
@@ -134,8 +134,8 @@ ParticleQualifierEntropyGradientFunction<TGradientNumericType, VDimension>
            double &maxdt) const
 {
   // Grab a pointer to the domain.  We need a Domain that has surface normal information.
-  const ParticleImageDomainWithGradients<TGradientNumericType, VDimension> *
-    domain = static_cast<const ParticleImageDomainWithGradients<
+  const ParticleImageDomain<TGradientNumericType, VDimension> *
+    domain = static_cast<const ParticleImageDomain<
   TGradientNumericType, VDimension> *>(system->GetDomain(d));
   const double epsilon = 1.0e-6;
   

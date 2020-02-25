@@ -16,7 +16,6 @@
 #define __itkParticleSystem_txx
 
 #include "itkCommand.h"
-#include "itkParticleImageDomainWithGradients.h"
 namespace itk
 {
 

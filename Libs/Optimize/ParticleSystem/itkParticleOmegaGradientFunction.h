@@ -16,7 +16,6 @@
 #define __itkParticleOmegaGradientFunction_h
 
 #include "itkParticleEntropyGradientFunction.h"
-#include "itkParticleImageDomainWithGradients.h"
 #include "itkParticleImageDomainWithCurvature.h"
 #include "itkParticleMeanCurvatureAttribute.h"
 #include "itkCommand.h"

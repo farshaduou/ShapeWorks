@@ -15,7 +15,6 @@
 #ifndef __itkParticleEnsembleEntropyFunction_txx
 #define __itkParticleEnsembleEntropyFunction_txx
 
-#include "itkParticleImageDomainWithGradients.h"
 #include "vnl/algo/vnl_symmetric_eigensystem.h"
 #include "itkParticleGaussianModeWriter.h"
 #include <string>
