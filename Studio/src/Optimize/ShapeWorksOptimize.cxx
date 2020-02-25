@@ -196,39 +196,30 @@ void ShapeWorksOptimize::run()
         continue;
       }
 
-      itk::ParticleImageDomainWithHessians<float,
-                                           3>* domainWithHess =
-        static_cast< itk::ParticleImageDomainWithHessians<float,
-                                                          3>*>(m_Sampler->GetParticleSystem()->
-                                                               GetDomain(i));
-      domainWithHess->DeletePartialDerivativeImages();
+      itk::ParticleImageDomain<float, 3>* domain = 
+                static_cast< itk::ParticleImageDomain<float, 3>*>(m_Sampler->GetParticleSystem()-> GetDomain(i));
+      domain->DeletePartialDerivativeImages();
     }
   }
   else {
     int numShapes = m_Sampler->GetParticleSystem()->GetNumberOfDomains();
     for (int i = 0; i < numShapes; i++) {
-      itk::ParticleImageDomainWithHessians<float,
-                                           3>* domainWithHess =
-        static_cast< itk::ParticleImageDomainWithHessians<float,
-                                                          3>*>(m_Sampler->GetParticleSystem()->
-                                                               GetDomain(i));
-      domainWithHess->DeletePartialDerivativeImages();
+      itk::ParticleImageDomain<float, 3>* domain =
+                static_cast< itk::ParticleImageDomain<float, 3>*>(m_Sampler->GetParticleSystem()-> GetDomain(i));
+      domain->DeletePartialDerivativeImages();
     }
   }
 
   if (m_d_flgs.size() > 0) {
     for (int i = 0; i < m_d_flgs.size(); i++) {
-      itk::ParticleImageDomainWithHessians<float,
-                                           3>* domainWithHess =
-        static_cast< itk::ParticleImageDomainWithHessians<float,
-                                                          3>*>(m_Sampler->GetParticleSystem()->
-                                                               GetDomain(m_d_flgs[i]));
+      itk::ParticleImageDomain<float, 3>* domain =
+                static_cast< itk::ParticleImageDomain<float, 3>*>(m_Sampler->GetParticleSystem()-> GetDomain(m_d_flgs[i]));
       if (m_use_normals.size() > 0) {
         if (m_use_normals[i % m_domains_per_shape]) {
-          domainWithHess->DeletePartialDerivativeImages();
+            domain->DeletePartialDerivativeImages();
         }
         else {
-          domainWithHess->DeleteImages();
+            domain->DeleteImages();
         }
       }
     }

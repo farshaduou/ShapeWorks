@@ -15,7 +15,7 @@
 #ifndef __itkParticleImageDomainWithCurvature_h
 #define __itkParticleImageDomainWithCurvature_h
 
-#include "itkParticleImageDomainWithHessians.h"
+#include "itkParticleImageDomain.h"
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageRegionIterator.h"
 #include "itkDiscreteGaussianImageFilter.h"
@@ -35,12 +35,12 @@ namespace itk
  */
 template <class T, unsigned int VDimension=3>
 class ITK_EXPORT ParticleImageDomainWithCurvature
-  : public ParticleImageDomainWithHessians<T, VDimension>
+  : public ParticleImageDomain<T, VDimension>
 {
 public:
   /** Standard class typedefs */
   typedef ParticleImageDomainWithCurvature Self;
-  typedef ParticleImageDomainWithHessians<T, VDimension> Superclass;
+  typedef ParticleImageDomain<T, VDimension> Superclass;
   typedef SmartPointer<Self>  Pointer;
   typedef SmartPointer<const Self> ConstPointer;
   typedef WeakPointer<const Self>  ConstWeakPointer;

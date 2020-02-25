@@ -23,6 +23,9 @@
 #include "itkGradientImageFilter.h"
 #include "itkFixedArray.h"
 
+#include "itkDiscreteGaussianImageFilter.h"
+#include "itkDerivativeImageFilter.h"
+
 namespace itk
 {
 /** \class ParticleImageDomain
@@ -48,6 +51,7 @@ public:
 
   typedef FixedArray<T, 3> VectorType;
   typedef vnl_vector_fixed<T, 3> VnlVectorType;
+  typedef vnl_matrix_fixed<T, VDimension, VDimension> VnlMatrixType;
 
   /** Point type of the domain (not the image). */
   typedef Point<double, VDimension> PointType;
@@ -96,8 +100,7 @@ public:
   virtual const PointType& GetUpperBound() const { return m_UpperBound; }
   virtual const PointType& GetLowerBound() const { return m_LowerBound; }
   /** Specify the lower and upper bounds of the region. */
-  void SetRegion(const PointType& lowerBound, const PointType& upperBound)
-  {
+  void SetRegion(const PointType& lowerBound, const PointType& upperBound) {
       SetLowerBound(lowerBound);
       SetUpperBound(upperBound);
   }
@@ -141,15 +144,17 @@ public:
     this->SetLowerBound(l);
     this->SetUpperBound(u);
 
+    InitializeGradientImage();
+    InitializeHessianImage();
+  }
 
-    // Compute gradient image and set up gradient interpolation.
-    typename GradientImageFilterType::Pointer filter = GradientImageFilterType::New();
-    filter->SetInput(I);
-    filter->SetUseImageSpacingOn();
-    filter->Update();
-    m_GradientImage = filter->GetOutput();
-
-    m_GradientInterpolator->SetInputImage(m_GradientImage);
+  /** Sample the image at a point.  This method performs no bounds checking.
+      To check bounds, use IsInsideBuffer. */
+  inline T Sample(const PointType& p) const {
+      if (IsInsideBuffer(p))
+          return  m_ScalarInterpolator->Evaluate(p);
+      else
+          return 0.0;
   }
   /** Sample the image at a point.  This method performs no bounds checking.
     To check bounds, use IsInsideBuffer.  SampleGradientsVnl returns a vnl
@@ -168,23 +173,50 @@ public:
   inline VnlVectorType SampleGradientVnl(const PointType& p) const {
       return VnlVectorType(this->SampleGradient(p).GetDataPointer());
   }
-  inline VnlVectorType SampleNormalVnl(const PointType& p, T epsilon = 1.0e-5) const
-  {
+  inline VnlVectorType SampleNormalVnl(const PointType& p, T epsilon = 1.0e-5) const {
       VnlVectorType grad = this->SampleGradientVnl(p).normalize();
       return grad;
   }
+  /** Sample the Hessian at a point.  This method performs no bounds checking.
+    To check bounds, use IsInsideBuffer.  SampleHessiansVnl returns a vnl
+    matrix of size VDimension x VDimension. */
+  inline VnlMatrixType SampleHessianVnl(const PointType& p) const
+  {
+      VnlMatrixType ans;
+      for (unsigned int i = 0; i < VDimension; i++)
+      {
+          ans[i][i] = m_Interpolators[i]->Evaluate(p);
+      }
 
+      // Cross derivatives
+      unsigned int k = VDimension;
+      for (unsigned int i = 0; i < VDimension; i++)
+      {
+          for (unsigned int j = i + 1; j < VDimension; j++, k++)
+          {
+              ans[i][j] = ans[j][i] = m_Interpolators[k]->Evaluate(p);
+          }
+      }
+      return ans;
+  }
+
+  /** Allow public access to the scalar interpolator. */
+  itkGetObjectMacro(ScalarInterpolator, ScalarInterpolatorType);
   itkGetObjectMacro(GradientImage, GradientImageType);
   itkGetObjectMacro(Image, ImageType);
   itkGetConstObjectMacro(Image, ImageType);
-
-  /** Sample the image at a point.  This method performs no bounds checking.
-      To check bounds, use IsInsideBuffer. */
-  inline T Sample(const PointType &p) const {
-      if(IsInsideBuffer(p))
-        return  m_ScalarInterpolator->Evaluate(p);
-      else
-        return 0.0;
+  /** Set /Get the standard deviation for blurring the image prior to
+      computation of the Hessian derivatives.  This value must be set prior to
+      initializing this class with an input image pointer and cannot be changed
+      once the class is initialized.. */
+  itkSetMacro(Sigma, double);
+  itkGetMacro(Sigma, double);
+  /** Access interpolators and partial derivative images. */
+  typename ScalarInterpolatorType::Pointer* GetInterpolators() {
+      return m_Interpolators;
+  }
+  typename ImageType::Pointer* GetPartialDerivatives() {
+      return m_PartialDerivatives;
   }
 
   /** Check whether the point p may be sampled in this image domain. */
@@ -192,19 +224,24 @@ public:
       return m_ScalarInterpolator->IsInsideBuffer(p); 
   }
 
+  void DeletePartialDerivativeImages() {
+      for (unsigned int i = 0; i < VDimension + ((VDimension * VDimension) - VDimension) / 2; i++) {
+          m_PartialDerivatives[i] = 0;
+          m_Interpolators[i] = 0;
+      }
+  }
   /** Used when a domain is fixed. */
   void DeleteImages() {
     m_Image = 0;
     m_ScalarInterpolator = 0;
     m_GradientImage = 0;
     m_GradientInterpolator = 0;
+    this->DeletePartialDerivativeImages();
   }
 
-  /** Allow public access to the scalar interpolator. */
-  itkGetObjectMacro(ScalarInterpolator, ScalarInterpolatorType);
   
 protected:
-  ParticleImageDomain() {
+  ParticleImageDomain() : m_Sigma(0.0) {
     m_ScalarInterpolator = ScalarInterpolatorType::New();
     m_GradientInterpolator = GradientInterpolatorType::New();
   }
@@ -233,6 +270,83 @@ private:
 
   typename GradientImageType::Pointer m_GradientImage;
   typename GradientInterpolatorType::Pointer m_GradientInterpolator;
+
+  double m_Sigma;
+
+  // Partials are stored:
+  //     0: dxx  3: dxy  4: dxz
+  //                 1: dyy  5: dyz
+  //                            2: dzz
+  //
+  typename ImageType::Pointer  m_PartialDerivatives[VDimension + ((VDimension * VDimension) - VDimension) / 2];
+
+  typename ScalarInterpolatorType::Pointer m_Interpolators[VDimension + ((VDimension * VDimension) - VDimension) / 2];
+
+  void InitializeGradientImage() {
+      // Compute gradient image and set up gradient interpolation.
+      typename GradientImageFilterType::Pointer filter = GradientImageFilterType::New();
+      filter->SetInput(this->GetImage());
+      filter->SetUseImageSpacingOn();
+      filter->Update();
+      m_GradientImage = filter->GetOutput();
+
+      m_GradientInterpolator->SetInputImage(m_GradientImage);
+  }
+
+  void InitializeHessianImage() {
+      typename DiscreteGaussianImageFilter<ImageType, ImageType>::Pointer
+          gaussian = DiscreteGaussianImageFilter<ImageType, ImageType>::New();
+      gaussian->SetVariance(m_Sigma * m_Sigma);
+      gaussian->SetInput(this->GetImage());
+      gaussian->SetUseImageSpacingOn();
+      gaussian->Update();
+
+      // Compute the second derivatives and set up the interpolators
+      for (unsigned int i = 0; i < VDimension; i++)
+      {
+          typename DerivativeImageFilter<ImageType, ImageType>::Pointer
+              deriv = DerivativeImageFilter<ImageType, ImageType>::New();
+          deriv->SetInput(gaussian->GetOutput());
+          deriv->SetDirection(i);
+          deriv->SetOrder(2);
+          deriv->SetUseImageSpacingOn();
+          deriv->Update();
+
+          m_PartialDerivatives[i] = deriv->GetOutput();
+
+          m_Interpolators[i] = ScalarInterpolatorType::New();
+          m_Interpolators[i]->SetInputImage(m_PartialDerivatives[i]);
+      }
+
+      // Compute the cross derivatives and set up the interpolators
+      unsigned int k = VDimension;
+      for (unsigned int i = 0; i < VDimension; i++)
+      {
+          for (unsigned int j = i + 1; j < VDimension; j++, k++)
+          {
+              typename DerivativeImageFilter<ImageType, ImageType>::Pointer
+                  deriv1 = DerivativeImageFilter<ImageType, ImageType>::New();
+              deriv1->SetInput(gaussian->GetOutput());
+              deriv1->SetDirection(i);
+              deriv1->SetUseImageSpacingOn();
+              deriv1->SetOrder(1);
+              deriv1->Update();
+
+              typename DerivativeImageFilter<ImageType, ImageType>::Pointer
+                  deriv2 = DerivativeImageFilter<ImageType, ImageType>::New();
+              deriv2->SetInput(deriv1->GetOutput());
+              deriv2->SetDirection(j);
+              deriv2->SetUseImageSpacingOn();
+              deriv2->SetOrder(1);
+
+              deriv2->Update();
+
+              m_PartialDerivatives[k] = deriv2->GetOutput();
+              m_Interpolators[k] = ScalarInterpolatorType::New();
+              m_Interpolators[k]->SetInputImage(m_PartialDerivatives[k]);
+          }
+      }
+  }
 };
 
 } // end namespace itk

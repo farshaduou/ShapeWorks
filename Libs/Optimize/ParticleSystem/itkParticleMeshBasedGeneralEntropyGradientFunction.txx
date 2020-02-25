@@ -13,7 +13,6 @@
 #include "itkParticleImplicitSurfaceDomain.h"
 #include <ctime>
 #include <time.h>
-#include "itkParticleImageDomainWithHessians.h"
 
 namespace itk
 {
